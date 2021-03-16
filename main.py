@@ -31,7 +31,7 @@ def convert():
             polyline.explode()
         start = pd.DataFrame([[*line.dxf.start] for line in msp.query("LINE")])
         end = pd.DataFrame([[*line.dxf.end] for line in msp.query("LINE")])
-        nodes = pd.concat([start, end], ignore_index=True)
+        nodes = pd.concat([start, end], ignore_index=True).round(4)
         nodes.name = "Węzły.txt"
         elements = pd.DataFrame(
             [(n, n + len(start), 0, 0, 0, 0) for n in range(1, len(start) + 1)]
