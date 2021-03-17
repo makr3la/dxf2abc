@@ -20,9 +20,13 @@ def convert():
         try:
             f = request.files.get("file")
             filename, extension = f.filename.replace(" ", "_").rsplit(".", 1)
+            if not extension.lower() == "dxf":
+                raise ezdxf.DXFTypeError
             buffer = io.BytesIO(f.read())
             wrapper = io.TextIOWrapper(buffer, encoding="utf-8")
             doc = ezdxf.read(wrapper)
+        except ezdxf.DXFTypeError:
+            return render_template("index.html", error="Wybierz plik w formacie DXF.")
         except ezdxf.DXFStructureError:
             return render_template("index.html", error="Niepoprawny lub zepsuty plik.")
         except UnicodeDecodeError:
