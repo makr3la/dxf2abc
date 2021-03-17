@@ -19,11 +19,14 @@ def convert():
     if request.method == "POST":
         try:
             f = request.files.get("file")
+            filename, extension = f.filename.replace(" ", "_").rsplit(".", 1)
             buffer = io.BytesIO(f.read())
             wrapper = io.TextIOWrapper(buffer, encoding="utf-8")
             doc = ezdxf.read(wrapper)
         except ezdxf.DXFStructureError:
-            return render_template("index.html", error="Invalid or corrupted DXF file.")
+            return render_template("index.html", error="Niepoprawny lub zepsuty plik.")
+        except UnicodeDecodeError:
+            return render_template("index.html", error="Minimalna wersja DXF 2007.")
         except Exception as e:
             return render_template("index.html", error=str(e))
         msp = doc.modelspace()
@@ -32,11 +35,15 @@ def convert():
         start = pd.DataFrame([[*line.dxf.start] for line in msp.query("LINE")])
         end = pd.DataFrame([[*line.dxf.end] for line in msp.query("LINE")])
         nodes = pd.concat([start, end], ignore_index=True).round(4)
-        nodes.name = "Węzły.txt"
+        nodes.name = f"Wezly-{filename}.txt"
+        if len(nodes.index) == 0:
+            return render_template("index.html", error="Nieprawidłowa geometria.")
+        nodes.columns = ["X", "Y", "Z"]
         elements = pd.DataFrame(
             [(n, n + len(start), 0, 0, 0, 0) for n in range(1, len(start) + 1)]
         )
-        elements.name = "Pręty.txt"
+        elements.name = f"Prety-{filename}.txt"
+        elements.columns = ["wI", "wJ", "wK", "Kier", "Mat", "Prz"]
         files = {}
         for df in [nodes, elements]:
             df.index += 1
@@ -54,7 +61,7 @@ def convert():
         return send_file(
             output,
             as_attachment=True,
-            attachment_filename=f"{f.filename.split('.')[0]}.zip",
+            attachment_filename=f"{filename}.zip",
         )
 
 
