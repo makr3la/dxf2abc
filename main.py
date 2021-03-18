@@ -25,7 +25,7 @@ def convert():
             buffer = io.BytesIO(f.read())
             wrapper = io.TextIOWrapper(buffer, encoding="utf-8")
             doc = ezdxf.read(wrapper)
-        except ezdxf.DXFTypeError:
+        except (ezdxf.DXFTypeError, ValueError):
             return render_template("index.html", error="Wybierz plik w formacie DXF.")
         except ezdxf.DXFStructureError:
             return render_template("index.html", error="Niepoprawny lub zepsuty plik.")
