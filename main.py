@@ -25,12 +25,12 @@ def convert():
             buffer = io.BytesIO(f.read())
             wrapper = io.TextIOWrapper(buffer, encoding="utf-8")
             doc = ezdxf.read(wrapper)
-        except (ezdxf.DXFTypeError, ValueError):
-            return render_template("index.html", error="Wybierz plik w formacie DXF.")
+        except (ezdxf.DXFTypeError, UnicodeDecodeError, ValueError):
+            return render_template(
+                "index.html", error="Wybierz plik w formacie DXF minimum 2007."
+            )
         except ezdxf.DXFStructureError:
             return render_template("index.html", error="Niepoprawny lub zepsuty plik.")
-        except UnicodeDecodeError:
-            return render_template("index.html", error="Minimalna wersja DXF 2007.")
         except Exception as e:
             return render_template("index.html", error=str(e))
         msp = doc.modelspace()
