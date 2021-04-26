@@ -44,10 +44,11 @@ def convert():
             return render_template("index.html", error="Nieprawidłowa geometria.")
         nodes.columns = ["X", "Y", "Z"]
         elements = pd.DataFrame(
-            [(n, n + len(start), 0, 0, 0, 0) for n in range(1, len(start) + 1)]
+            [(n, n + len(start), 0, 0, 0) for n in range(1, len(start) + 1)]
         )
+        elements.columns = ["wI", "wJ", "wK", "Kier", "Mat"]
+        elements["Prz"] = pd.DataFrame([[line.dxf.color] for line in msp.query("LINE")])
         elements.name = f"Prety-{filename}.txt"
-        elements.columns = ["wI", "wJ", "wK", "Kier", "Mat", "Prz"]
         files = {}
         for df in [nodes, elements]:
             df.index += 1
