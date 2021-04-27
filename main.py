@@ -48,6 +48,7 @@ def convert():
         )
         elements.columns = ["wI", "wJ", "wK", "Kier", "Mat"]
         elements["Prz"] = pd.DataFrame([[line.dxf.color] for line in msp.query("LINE")])
+        elements["Prz"].replace({256: 0}, inplace=True)
         elements.name = f"Prety-{filename}.txt"
         files = {}
         for df in [nodes, elements]:
