@@ -12,9 +12,13 @@ a {
 }
 
 input[type=submit] {
-    width: 88px;
+    width: 136px;
     padding: 10px;
     font-size: 16px;
     color: red;
     font-weight: 700;
+}
+
+input[type=number] {
+    width: 66px;
 }

@@ -8,9 +8,16 @@
 </head>
 <body>
     <form action="convert" method="post" enctype="multipart/form-data">
-        <p><input type="file" name="file"></p>
-        {{ error }}
-        <p><input type="submit" value="Rama3D"></p>
+        <p>
+            <input type="file" name="file"><br>
+            DXF z czystą geometrią rysowany prostymi liniami i poliliniami
+        </p>
+        <p>{{ error }}</p>
+        <p>
+            <input type="submit" name="b" value="Rama3D">
+            <input type="submit" name="b" value="Płaskie">
+            g = <input type="number" name="g" value="20"> cm
+        </p>
     </form>
     <h6>
         Copyright (c) 2021 <a href="mailto:prm.kowalski@gmail.com">Paweł Kowalski</a>
