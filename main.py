@@ -1,11 +1,9 @@
 import io
-from itertools import product, tee
-from math import ceil
+from itertools import tee
 from zipfile import ZipFile
 
 import ezdxf
 from flask import Flask, render_template, request, send_file
-import numpy as np
 import pandas as pd
 
 app = Flask(__name__)
@@ -46,68 +44,68 @@ def convert():
         msp = doc.modelspace()
         for polyline in msp.query("LWPOLYLINE"):
             polyline.explode()
-        start = pd.DataFrame([[*line.dxf.start] for line in msp.query("LINE")])
-        end = pd.DataFrame([[*line.dxf.end] for line in msp.query("LINE")])
-        nodes = pd.concat([start, end], ignore_index=True).round(3)
-        if len(nodes.index) == 0:
-            return render_template("index.html", error="Nieprawidłowa geometria.")
-        nodes.columns = ["X", "Y", "Z"]
-        nodes.name = f"Wezly-{filename}.txt"
-        elements = pd.DataFrame(
-            [(n, n + len(start), 0, 0, 0) for n in range(1, len(start) + 1)]
-        )
-        elements.columns = ["wI", "wJ", "wK", "Kier", "Mat"]
-        elements["Prz"] = pd.DataFrame([[line.dxf.color] for line in msp.query("LINE")])
-        elements["Prz"].replace({256: 0}, inplace=True)
-        elements.name = f"Prety-{filename}.txt"
-        if request.form["b"] == "Płaskie":
-            dxf_units = {
-                4: 1e-1,  # Millimeters
-                5: 1e0,  # Centimeters
-                6: 1e2,  # Meters
-                7: 1e5,  # Kilometers
-            }
-            g = float(request.form["g"])
-            mesh = {}
-            for column in nodes.columns:
-                positions = nodes[column].sort_values().unique()
-                if all(positions == 0):
-                    mesh[column] = np.zeros(1)
-                else:
-                    mesh[column] = np.empty(0)
-                    for x, y in pairwise(positions):
-                        mesh[column] = np.append(
-                            mesh[column],
-                            np.linspace(
-                                x, y, ceil((y - x) / (g / dxf_units.get(doc.units)) + 1)
-                            ),
+        entities = []
+        for i, e in enumerate(msp.query(), start=1):
+            if e.dxf.dxftype in ["3DFACE"]:
+                entities.append(
+                    pd.DataFrame(e.wcs_vertices(), columns=["X", "Y", "Z"]).assign(
+                        i=i, Prz=float("nan")
+                    )
+                )
+            elif e.dxf.dxftype in ["LINE"]:
+                entities.append(
+                    pd.DataFrame(
+                        [[*e.dxf.start, i, 0 if e.dxf.color == 256 else e.dxf.color]],
+                        columns=["X", "Y", "Z", "i", "Prz"],
+                    )
+                )
+                entities.append(
+                    pd.DataFrame(
+                        [[*e.dxf.end, i, 0 if e.dxf.color == 256 else e.dxf.color]],
+                        columns=["X", "Y", "Z", "i", "Prz"],
+                    )
+                )
+            elif e.dxf.dxftype in ["ARC", "ELLIPSE", "CIRCLE"]:
+                for segment in e.flattening(6):
+                    entities.append(
+                        pd.DataFrame(
+                            [[*segment, i, 0 if e.dxf.color == 256 else e.dxf.color]],
+                            columns=["X", "Y", "Z", "i", "Prz"],
                         )
-            mesh = (
-                pd.DataFrame(sorted(product(*mesh.values())), columns=nodes.columns)
-                .round(3)
-                .drop_duplicates()
-                .reset_index(drop=True)
+                    )
+        df = pd.concat(entities, ignore_index=True)
+        df.index += 1
+        if len(df.index) == 0:
+            return render_template("index.html", error="Nieprawidłowa geometria.")
+        points = [
+            pd.DataFrame([point.dxf.location], columns=["X", "Y", "Z"])
+            for point in msp.query("POINT")
+        ]
+        wezly = pd.concat([df[["X", "Y", "Z"]], *points], ignore_index=True).round(3)
+        wezly.name = f"Wezly-{filename}.txt"
+        prety = []
+        for _, group in df[df["Prz"].notna()].groupby("i"):
+            for x, y in pairwise(group.index):
+                prety.append([x, y, 0, 0, 0, int(group["Prz"].min())])
+        prety = pd.DataFrame(prety, columns=["wI", "wJ", "wK", "Kier", "Mat", "Prz"])
+        prety.name = f"Prety-{filename}.txt"
+        plaskie = []
+        for _, group in df[df["Prz"].isna()].groupby("i"):
+            plaskie.append(
+                [*group.index, *[0] * (5 - len(group)), float(request.form["g"]) / 100]
             )
-            mesh.name = f"Wezly-{filename}.txt"
-            c = mesh.value_counts("X").min()
-            flats = pd.DataFrame(
-                [
-                    (n, n + 1, n + c + 1, n + c, 0, g / dxf_units[6])
-                    for n in range(1, len(mesh) + 1)
-                ]
-            )
-            flats = flats.drop(flats.index[c - 1 :: c]).reset_index(drop=True)[: -c + 1]
-            flats.columns = ["w1", "w2", "w3", "w4", "w5", "g"]
-            flats.name = f"Plaskie-{filename}.txt"
+        plaskie = pd.DataFrame(plaskie, columns=["w1", "w2", "w3", "w4", "w5", "g[m]"])
+        plaskie.name = f"Plaskie-{filename}.txt"
         files = {}
-        for df in [nodes, elements] if request.form["b"] == "Rama3D" else [mesh, flats]:
+        for df in [wezly, prety, plaskie]:
             df.index += 1
-            with io.StringIO() as buffer:
-                df.to_csv(buffer, sep=" ", decimal=",", line_terminator="\r\n")
-                mem = io.BytesIO()
-                mem.write(buffer.getvalue().encode())
-                mem.seek(0)
-                files[df.name] = mem
+            if len(df.index) > 0:
+                with io.StringIO() as buffer:
+                    df.to_csv(buffer, sep=" ", decimal=",", line_terminator="\r\n")
+                    mem = io.BytesIO()
+                    mem.write(buffer.getvalue().encode())
+                    mem.seek(0)
+                    files[df.name] = mem
         output = io.BytesIO()
         with ZipFile(output, "w") as zip_file:
             for name, mem in files.items():
