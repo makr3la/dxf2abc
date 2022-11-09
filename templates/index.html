@@ -8,20 +8,30 @@
 </head>
 <body>
     <form action="convert" method="post" enctype="multipart/form-data">
-        <p>
-            <input type="file" name="file"><br>
-            DXF z czystą geometrią rysowany prostymi liniami i poliliniami
-        </p>
+        <h2>KONWERTER PLIKÓW DXF DO ABC</h2><br>
+        <h5>
+            &copy; 2021÷<script>document.write(new Date().getFullYear())</script>
+            <a href="mailto:prm.kowalski@gmail.com">Paweł Kowalski</a>
+        </h5>
+        <ol type="1">
+            <li>Narysuj geometrię w dowolnym programie CAD</li>
+            <li>Obiekty rysuj na modelu, warstwa dowolna</li>
+            <li>Numer koloru obiektu z zakresu od 0 do 255<br>
+                odpowiada numerowi przekroju pręta</li>
+            <li>Usuń z modelu wszystkie zbędne elementy</li>
+            <li>Zapisz plik w formacie <b>DXF minimum 2007</b></li>
+            <li><input type="file" name="file"></li>
+            <li>Wprowadź grubość powłok <b>g = <input type="number" name="g" value="20"> cm</b></li>
+            <li><input type="submit" name="b" value="Pobierz przekonwertowany plik"><br>
+                <b>POLILINIE</b> zostają rozbite na <b>LINIE / ŁUKI</b><br>
+                <b>LINIE</b> przekonwertowane na dwuwęzłowe pręty<br>
+                <b>ŁUKI, OKRĘGI, ELIPSY</b> na zestawy kilku prętów<br>
+                <b>3DPOW (3DFACE)</b> na powłoki o 3 lub 4 węzłach<br>
+                <b>PUNKTY</b> na dodatkowe węzły</li>
+            <li>Rozpakuj i wczytaj pliki tekstowe w <a href="http://www.pro-soft.gliwice.pl/">ABC</a></li>
+            <li>Po wczytaniu użyj <b>Węzły => Razem automat</b></li>
+        </ol>
         <p>{{ error }}</p>
-        <p>
-            <input type="submit" name="b" value="Rama3D"><br>
-            <input type="submit" name="b" value="Płaskie">
-            g = <input type="number" name="g" value="20"> cm
-        </p>
     </form>
-    <h6>
-        &copy; 2021÷<script>document.write(new Date().getFullYear())</script>
-        <a href="mailto:prm.kowalski@gmail.com">Paweł Kowalski</a>
-    </h6>
 </body>
 </html>
