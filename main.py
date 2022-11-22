@@ -49,7 +49,11 @@ def convert():
             if e.dxf.dxftype in ["3DFACE"]:
                 entities.append(
                     pd.DataFrame(e.wcs_vertices(), columns=["X", "Y", "Z"]).assign(
-                        i=i, Prz=float("nan")
+                        i=i,
+                        Prz=float("nan"),
+                        g=float(request.form["g"])
+                        if e.dxf.color == 256
+                        else e.dxf.color,
                     )
                 )
             elif e.dxf.dxftype in ["LINE"]:
@@ -91,9 +95,7 @@ def convert():
         prety.name = f"Prety-{filename}.txt"
         plaskie = []
         for _, group in df[df["Prz"].isna()].groupby("i"):
-            plaskie.append(
-                [*group.index, *[0] * (5 - len(group)), float(request.form["g"]) / 100]
-            )
+            plaskie.append([*group.index, *[0] * (5 - len(group)), group.g.min() / 100])
         plaskie = pd.DataFrame(plaskie, columns=["w1", "w2", "w3", "w4", "w5", "g[m]"])
         plaskie.name = f"Plaskie-{filename}.txt"
         files = {}
